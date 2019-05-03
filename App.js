@@ -1,8 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View, Image, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Image, ScrollView, Button, AsyncStorage } from 'react-native';
+import { createAppContainer, createStackNavigator } from 'react-navigation';
 
-
-export default class App extends React.Component {
+class MainPage extends React.Component {
   state = {
     albums: [],
   }
@@ -15,14 +15,24 @@ export default class App extends React.Component {
       this.setState({
         albums: result.album,
       })
-    })
+      AsyncStorage.setItem("albums", JSON.stringify(result.album));
+    }).catch(() => {
+      AsyncStorage.getItem("albums")
+        .then(res => {
+          if (res) {
+            this.setState({ albums: JSON.parse(res.album) });
+          } else this.setState({ albums: [] });
+        })
+        .done();
+    });
+
   }
   render() {
     return (
-      <ScrollView >
+      <ScrollView style={{ flex: 1, marginTop: 20 }} >
         <View style={styles.container}>
           {this.state.albums.map((item, index) => (
-            <View key={index} style={{ width: "50%" }}>
+            <View key={index} style={{ alignItems: "center", width: "50%", height: 300 }}>
               <Image source={{ uri: item.strAlbumThumb }} style={{ width: 100, height: 100 }} />
               <Text>
                 {item.strAlbum}
@@ -30,11 +40,80 @@ export default class App extends React.Component {
               <Text>
                 {item.intYearReleased}
               </Text>
+              <Button
+                style={{ alignSelf: 'flex-end', width: '70%' }}
+                title="Go to Details"
+                onPress={() => {
+                  this.props.navigation.navigate('Details', {
+                    album: item
+                  });
+                }}
+              />
             </View>
           ))}
         </View>
-      </ScrollView>
+      </ ScrollView>
     );
+  }
+}
+
+class DetailsScreen extends React.Component {
+  render() {
+    const { navigation } = this.props;
+    const album = navigation.getParam('album');
+    return (
+      <ScrollView style={{ flex: 1, marginTop: 20 }} >
+        <View style={{ alignItems: "center" }}>
+          <Image source={{ uri: album.strAlbumThumb }} style={{ width: 200, height: 200 }} />
+          <Text>
+            {album.strAlbum}
+          </Text>
+          <Text>
+            {album.strStyle}
+          </Text>
+          <Text>
+            {album.intYearReleased}
+          </Text>
+          {album.strDescriptionEN != null &&
+            <Text style={{ marginTop: 30, marginBottom: 10, fontSize: 20, fontWeight: 'bold' }}>
+              Description:
+            </Text>
+          }
+          <Text>
+            {album.strDescriptionEN}
+          </Text>
+          {album.strReview !== '' &&
+            <Text style={{ marginTop: 20, marginBottom: 10, fontSize: 20, fontWeight: 'bold' }}>
+              Review:
+            </Text>
+          }
+          <Text >
+            {album.strReview}
+          </Text>
+        </View>
+      </ ScrollView>
+    );
+  }
+}
+
+const RootStack = createStackNavigator(
+  {
+    MainPage: {
+      screen: MainPage,
+    },
+    Details: {
+      screen: DetailsScreen,
+    },
+  },
+  {
+    initialRouteName: 'MainPage',
+  }
+);
+const AppContainer = createAppContainer(RootStack);
+
+export default class App extends React.Component {
+  render() {
+    return <AppContainer />;
   }
 }
 
